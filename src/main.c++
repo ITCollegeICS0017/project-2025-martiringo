@@ -18,6 +18,7 @@ struct OrderData {
     bool isExpress;
     int price;
     bool done;
+    bool paid;
 };
 
 struct OrderPhotographer {
