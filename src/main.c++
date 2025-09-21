@@ -132,6 +132,8 @@ public:
 };
 
 int main(void) {
+  // Create a client and receptionist. The client then places an order and the
+  // receptionist creates the main order for the client.
   Client client1("Priit");
   Receptionist receptionist;
   client1.placeOrder();
