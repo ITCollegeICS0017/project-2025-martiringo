@@ -12,7 +12,7 @@ enum ServiceType {
 // Order data
 struct OrderData {
     int id;
-    Client client;
+    string name;
     enum ServiceType type;
     string completionTime;
     bool isExpress;
@@ -31,7 +31,7 @@ struct OrderPhotographer {
 
 struct OrderClient {
     int id;
-    Client client;
+    string name;
     enum ServiceType type;
     string completionTime;
     bool isExpress;
@@ -66,7 +66,7 @@ public:
         cout << "It will create the main order, with the main template (OrderData)" << endl;
     }
 
-    void orderPaid(OrderData order) {
+    void collectPayment(OrderData order) {
         cout << "Order ID '" << order.id << "' is paid" << endl;
     }
     
