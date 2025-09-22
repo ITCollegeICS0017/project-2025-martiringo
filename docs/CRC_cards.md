@@ -29,4 +29,4 @@
 ## Administrator
 | Responsabilities | Collaborators |
 | -------- | ------- |
-| Review reports from receptionist and materials <br> Track consumables | Photographer, Receptionist   |
+| Review reports from receptionist and materials | Photographer, Receptionist   |
