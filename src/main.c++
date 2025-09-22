@@ -115,8 +115,6 @@ public:
   }
 };
 
-
-
 // Type of service
 enum ServiceType { PhotoPrinting, FilmDeveloping };
 
@@ -152,7 +150,6 @@ struct OrderClient {
   int price;
 };
 
-
 // Mappings for storing orders:
 std::map<int, Order> mainOrders;
 std::map<int, OrderClient> ordersClient;
@@ -164,3 +161,4 @@ int main(void) {
   Receptionist receptionist;
   receptionist.createClient("priit", 1);
   receptionist.createOrder(1, "23/09/2025-17:30", PhotoPrinting);
+}
