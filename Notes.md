@@ -11,3 +11,11 @@
 3. Then, the photographer will process orders depending on the completion time (express first). 
     - When is done it will mark his order as done, that automatically will update the main order related as done as well. So the receptionist will see which orders are done and not paid.
 4. The receptionist then will process the payment of the order. The order willbe marked as paid and can be keept as historical data and not delete it.
+
+
+
+## To do
+
+- Should the constructor of client contain the completion time as well? Nope, if the client has more than one order then needs to specify a completion time for the others. Will be passed in placeOrder().
+- I need to know if in placeOrder() it calls directly the functions of the receptionist or only stores the data in a vector and then the receptionist creates the order from that vector called by herself.
+- FOr deleting the pending orders from the vector I can use the pop_back, but for that I need to loop the vector from the end till  the start
