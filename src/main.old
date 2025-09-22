@@ -1,4 +1,5 @@
 #include <iostream>
+#include <map>
 #include <stdio.h>
 #include <vector>
 using namespace std;
@@ -6,10 +7,22 @@ using namespace std;
 // Type of service
 enum ServiceType { PhotoPrinting, FilmDeveloping };
 
+// Mapping of all clients with their uniques Ids
+map<int, Client> clients;
+
+// Mappings for storing orders:
+std::map<int, OrderData> mainOrders;
+std::map<int, OrderClient> ordersClient;
+std::map<int, OrderPhotographer> ordersPhotographer;
+
+// This line is double, on purpose?
+// Mapping of all clients with their uniques Ids
+map<int, Client> clients;
+
 // Order data
 struct OrderData {
   int id;
-  // Client client;
+  Client client;
   enum ServiceType type;
   string completionTime;
   bool isExpress;
@@ -28,7 +41,7 @@ struct OrderPhotographer {
 
 struct OrderClient {
   int id;
-  // Client client;
+  Client client;
   enum ServiceType type;
   string completionTime;
   bool isExpress;
@@ -37,41 +50,60 @@ struct OrderClient {
 
 // Client
 class Client {
-public:
+private:
+  int clientId;
   string name;
+  // This two variables will keep changing while the client places more than one
+  // order
   string completionTime;
-  OrderClient order;
+  ServiceType service;
 
-  // Constructor
-  Client(string n) : name(n) {}
+  vector<int> orderIds; // All the id's of the client, for accessing the order
 
-  void placeOrder() {
-    cout << "Client will choose which service type he want" << endl;
-  }
+public:
+  // Constructor -> Used by receptionist
+  // The client ID needs to be unique
+  Client(string name, int clientId) : name(name), clientId(clientId) {}
+
+  // Function to get the specific order
+  OrderClient getOrder(int id) { return ordersClient[id]; }
+
+  // Function to get last/current order
+  OrderClient getLastOrder() { return ordersClient[orderIds.back()]; }
+
+  // Need it for the receptionist to set the orderID to the client
+  void setOrderToClient(int idClient) { orderIds.push_back(idClient); }
+
+  // Getters functions for the receptionist
+  string getCompletionTime() { return completionTime; }
+
+  void setCompletionTime(string com) { completionTime = com; }
+
+  ServiceType getServiceType() { return service; }
+
+  void setServiceType(ServiceType serv) { service = serv; }
 };
 
 // Receptionist
 class Receptionist {
 public:
-  // Receptionist will keep track of all the order types
-  vector<OrderData> mainOrders;
-  vector<OrderPhotographer> ordersPh;
-  vector<OrderClient> ordersCli;
-
-  void createOrder() {
-    cout << "The receptionist will input the client details and the completion "
-            "time"
-         << endl;
-    cout << "It will create the main order, with the main template (OrderData)"
-         << endl;
+  void createClient(string name, int clientId) {
+    clients[clientId] = Client(name, clientId);
   }
 
-  void orderPaid(OrderData order) {
+  // What about making a loop of all the pending orders?
+  void createOrder(int clientId, string completionTime, ServiceType service) {
+    // I need to get the completion time and the service from the Client struct
+    // and then create the order with it
+  }
+
+  void collectPayment(int clientId, OrderData order) {
     cout << "Order ID '" << order.id << "' is paid" << endl;
   }
 
-  // I don't know if I need to create a struct or something similar for the
-  // reports, will see in the future
+  // Will get all the reports paid in a day and sum, everything
+  // Will give other characteristics, like the count of orders paid, the count
+  // of express orders, the count of clients, etc
   void generateReport() {
     cout << "Receptionist generated the revenue report" << endl;
   }
@@ -81,6 +113,7 @@ public:
 class Order {
 public:
   OrderData order;
+  // Should I put one instance of each order type?
 
   // Constructor
   Order(OrderData d) : order(d) {}
@@ -121,21 +154,15 @@ public:
 
 class Administrator {
 public:
-  void trackConsumables() {
+  void viewReports() {
     cout << "Administrator is tracking the consumables materials" << endl;
-  }
-
-  // Don't know if this is necessary
-  void replenishMaterials() {
-    cout << "Administrator has replenished the materials" << endl;
   }
 };
 
 int main(void) {
-  // Create a client and receptionist. The client then places an order and the
-  // receptionist creates the main order for the client.
-  Client client1("Priit");
+  // Create receptionist that creates a client with a name and ID. The
+  // receptionist then creates an order.
   Receptionist receptionist;
-  client1.placeOrder();
-  receptionist.createOrder();
+  receptionist.createClient("priit", 1);
+  receptionist.createOrder(1, "23/09/2025-17:30", PhotoPrinting);
 }

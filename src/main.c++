@@ -4,50 +4,6 @@
 #include <vector>
 using namespace std;
 
-// Type of service
-enum ServiceType { PhotoPrinting, FilmDeveloping };
-
-// Mapping of all clients with their uniques Ids
-map<int, Client> clients;
-
-// Mappings for storing orders:
-std::map<int, OrderData> mainOrders;
-std::map<int, OrderClient> ordersClient;
-std::map<int, OrderPhotographer> ordersPhotographer;
-
-// This line is double, on purpose?
-// Mapping of all clients with their uniques Ids
-map<int, Client> clients;
-
-// Order data
-struct OrderData {
-  int id;
-  Client client;
-  enum ServiceType type;
-  string completionTime;
-  bool isExpress;
-  int price;
-  bool done;
-  bool paid;
-};
-
-struct OrderPhotographer {
-  int id;
-  enum ServiceType type;
-  string completionTime;
-  bool isExpress;
-  bool done;
-};
-
-struct OrderClient {
-  int id;
-  Client client;
-  enum ServiceType type;
-  string completionTime;
-  bool isExpress;
-  int price;
-};
-
 // Client
 class Client {
 private:
@@ -158,6 +114,49 @@ public:
     cout << "Administrator is tracking the consumables materials" << endl;
   }
 };
+
+
+
+// Type of service
+enum ServiceType { PhotoPrinting, FilmDeveloping };
+
+// Mapping of all clients with their uniques Ids
+map<int, class Client> clients;
+
+// Order data
+struct OrderData {
+  int id;
+  class Client client;
+  enum ServiceType type;
+  string completionTime;
+  bool isExpress;
+  int price;
+  bool done;
+  bool paid;
+};
+
+struct OrderPhotographer {
+  int id;
+  enum ServiceType type;
+  string completionTime;
+  bool isExpress;
+  bool done;
+};
+
+struct OrderClient {
+  int id;
+  class Client client;
+  enum ServiceType type;
+  string completionTime;
+  bool isExpress;
+  int price;
+};
+
+
+// Mappings for storing orders:
+std::map<int, Order> mainOrders;
+std::map<int, OrderClient> ordersClient;
+std::map<int, OrderPhotographer> ordersPhotographer;
 
 int main(void) {
   // Create receptionist that creates a client with a name and ID. The
