@@ -1,6 +1,5 @@
 | User Story  | CRC Responsability | Simple Class Diagram Element | C++ Element |
 | -------- | ------- | ------- | ------- |
-| Client places an order  | **Client**: Place order  |         | `Client::placeOrder()`        |
 | Receptionist creates the order | **Receptionist**: Records the client data <br> **Order**: Calculates price     |         | `Receptionist::createOrder()` <br> `Order::calculatePrice()`   |
 | Order generates two child orders    | **Order**: <br> Create client type order <br> Create photographer type order    |         | `Order::generateOrders()`    |
 | Photographer process the orders | **Photographer**: <br> Processes order and return results <br> Use consumable materials |  | `Photographer::processOrder()` |
