@@ -4,7 +4,7 @@
 ## Client
 | Responsabilities | Collaborators |
 | -------- | ------- |
-| Place an order (photo printing or film developing) <br> Pay for completed order  | Receptionist, Order | 
+| Place an order (photo printing or film developing)  | Receptionist, Order | 
 
 ## Receptionist
 | Responsabilities | Collaborators |
