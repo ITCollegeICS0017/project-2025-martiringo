@@ -164,4 +164,3 @@ int main(void) {
   Receptionist receptionist;
   receptionist.createClient("priit", 1);
   receptionist.createOrder(1, "23/09/2025-17:30", PhotoPrinting);
-}
