@@ -15,6 +15,7 @@ std::map<int, OrderData> mainOrders;
 std::map<int, OrderClient> ordersClient;
 std::map<int, OrderPhotographer> ordersPhotographer;
 
+// This line is double, on purpose?
 // Mapping of all clients with their uniques Ids
 map<int, Client> clients;
 
@@ -159,10 +160,9 @@ public:
 };
 
 int main(void) {
-  // Create a client and receptionist. The client then places an order and the
-  // receptionist creates the main order for the client.
-  // Client client1("Priit");
-  // Receptionist receptionist;
-  // client1.placeOrder();
-  // receptionist.createOrder();
+  // Create receptionist that creates a client with a name and ID. The
+  // receptionist then creates an order.
+  Receptionist receptionist;
+  receptionist.createClient("priit", 1);
+  receptionist.createOrder(1, "23/09/2025-17:30", PhotoPrinting);
 }
