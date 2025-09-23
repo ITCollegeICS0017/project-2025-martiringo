@@ -4,6 +4,51 @@
 #include <vector>
 using namespace std;
 
+// Type of service
+enum ServiceType { PhotoPrinting, FilmDeveloping };
+int clientIdInc = 0;
+
+class Client;
+class Order;
+// Mapping of all clients with their uniques Ids
+map<int, Client> clients;
+
+// Mappings for storing orders:
+
+
+// Order data
+struct OrderData {
+  int id;
+  Client* client;
+  enum ServiceType type;
+  string completionTime;
+  bool isExpress;
+  int price;
+  bool done;
+  bool paid;
+};
+
+struct OrderPhotographer {
+  int id;
+  enum ServiceType type;
+  string completionTime;
+  bool isExpress;
+  bool done;
+};
+
+struct OrderClient {
+  int id;
+  Client* client;
+  enum ServiceType type;
+  string completionTime;
+  bool isExpress;
+  int price;
+};
+
+std::map<int, Order> mainOrders;
+std::map<int, OrderClient> ordersClient;
+std::map<int, OrderPhotographer> ordersPhotographer;
+
 // Client
 class Client {
 private:
@@ -19,7 +64,10 @@ private:
 public:
   // Constructor -> Used by receptionist
   // The client ID needs to be unique
-  Client(string name, int clientId) : name(name), clientId(clientId) {}
+  Client(string name, int clientId) {
+        this->name = name; 
+        this->clientId = clientId; 
+    }
 
   // Function to get the specific order
   OrderClient getOrder(int id) { return ordersClient[id]; }
@@ -43,8 +91,10 @@ public:
 // Receptionist
 class Receptionist {
 public:
-  void createClient(string name, int clientId) {
-    clients[clientId] = Client(name, clientId);
+  void createClient(string name) {
+    Client c(name, clientIdInc);
+    clients.emplace(clientIdInc, c);
+    clientIdInc++;
   }
 
   // What about making a loop of all the pending orders?
@@ -115,52 +165,9 @@ public:
   }
 };
 
-
-
-// Type of service
-enum ServiceType { PhotoPrinting, FilmDeveloping };
-
-// Mapping of all clients with their uniques Ids
-map<int, class Client> clients;
-
-// Order data
-struct OrderData {
-  int id;
-  class Client client;
-  enum ServiceType type;
-  string completionTime;
-  bool isExpress;
-  int price;
-  bool done;
-  bool paid;
-};
-
-struct OrderPhotographer {
-  int id;
-  enum ServiceType type;
-  string completionTime;
-  bool isExpress;
-  bool done;
-};
-
-struct OrderClient {
-  int id;
-  class Client client;
-  enum ServiceType type;
-  string completionTime;
-  bool isExpress;
-  int price;
-};
-
-
-// Mappings for storing orders:
-std::map<int, Order> mainOrders;
-std::map<int, OrderClient> ordersClient;
-std::map<int, OrderPhotographer> ordersPhotographer;
-
 int main(void) {
   // Create receptionist that creates a client with a name and ID. The
   // receptionist then creates an order.
   Receptionist receptionist;
-  receptionist.createClient("priit", 1);
+  receptionist.createClient("priit");
   receptionist.createOrder(1, "23/09/2025-17:30", PhotoPrinting);
