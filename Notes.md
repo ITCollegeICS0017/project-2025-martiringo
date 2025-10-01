@@ -34,3 +34,12 @@
 
 
 ## To resolve
+1. I can create the order in its constructor, easier and simpler.
+2. Set const on getters.
+3. Maybe get the orders for client and photographer on demand (so on view functions), made them out of the general order.
+4. Make sure you are writting on storage when making changes.
+5. I can create a different mappings for unpaid, done, reported orders. No need to delete them from main orders.
+
+## Todo
+- Error handling
+- File mangement
