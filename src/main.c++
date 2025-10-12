@@ -98,6 +98,18 @@ int servicePrice(ServiceType service)
   throw std::invalid_argument("Invalid ServiceType");
 }
 
+
+string toString(ServiceType type) {
+    switch(type) {
+      case PhotoPrinting: return "PhotoPrinting";
+      case FilmDeveloping: return "FilmDeveloping";
+      case DigitalEditing: return "DigitalEditing";
+      case PassportPhoto: return "PassportPhoto";
+      default: return "Unknown service";
+
+    }
+  }
+
 // I create the interface so the receptionist and Photographer can access to functions of Studio without declaring it
 class IStudio
 {
@@ -214,15 +226,13 @@ private:
   vector<int> orderIds;
 
   // Need it for the receptionist to set the orderID to the client
-  // @todo check the that the order is valid? I think is already validated when creating the order, and this function can not be called isolated so I don't
-  // think is necessary
   void setOrderToClient(int orderId)
   {
     orderIds.push_back(orderId);
+    cout << "New order - " << orderId << " - added to the client - " << clientId << " -" << endl;
   }
 
   // Setters functions for the receptionist
-  // @todo validation of the completion time? I think is also done when creating the order
   void setCompletionTime(system_clock::time_point com)
   {
     completionTime = com;
@@ -249,7 +259,7 @@ public:
     return orderClient;
   }
 
-  // Function to get last/current order
+  // Function to get last/current order of the client
   OrderClient getLastOrder()
   {
     int id = orderIds.back();
@@ -301,11 +311,15 @@ public:
     auto &clients = studio.getClients();
     clients.emplace(clientIdInc, Client(name, clientIdInc));
     clientIdInc++;
+
+    // Logs
+    cout << "Client created with id - " << clientIdInc - 1 << " - and name - " << name << endl;
   }
 
   // @dev the int completionTime needs to be in hours. If the order needs to be completed in 1 day then input 24 (hours)
   // @dev clientId must exist, so createClient must be called first, before createOrder
   // @dev the clientId is inserted by the receptionist in case one already registered client wants to make another order
+
   int createOrder(int clientId, int completionTime, ServiceType service)
   {
     if (!studio.offersService(service))
@@ -317,9 +331,12 @@ public:
     {
       throw runtime_error("Completion time must be 1 >= completionT <= 8765 (1 year in hours)");
     }
-    // Automatically checks that the client is inside the clients of the studio
-    // @ask is it enough error handling?
     auto &clients = studio.getClients();
+    // Validation 
+    if (!validateClient(clientId, clients)) {
+      throw runtime_error("Client don't exist or out of your studio");
+    }
+    // Automatically checks that the client is inside the clients of the studio, but still, need to handle the error
     Client *client = &clients.at(clientId);
     system_clock::time_point completionT = system_clock::now() + hours(completionTime);
 
@@ -359,19 +376,54 @@ public:
     int id = orderId;
     orderId++;
 
+    // Logs
+    cout << "New order created:" << endl;
+    cout << "Order ID: " << id << endl;
+    cout << "Client ID: " << clientId << endl;
+    cout << "Studio ID: " << studio.getId() << endl;
+    cout << "Service: " << toString(service) << endl;
+    auto now = system_clock::to_time_t(completionT);
+    string timeStr = ctime(&now);
+    cout << "Completion Timestamp: " << timeStr << endl;
+    cout << "Is express: " << boolalpha << isExpress << endl;
+    cout << "Price: " << price << endl;
+
     return id;
+  }
+
+  bool validateClient(int clientId, unordered_map<int, Client> clients) {
+    for (auto [id, client] : clients) {
+      if (id == clientId) {
+        return true;
+      }
+    }
+    return false;
   }
 
   // Mark the order as paid
   // Only orders from the clients of the local studio
   void collectPayment(int orderId)
   {
+    // Validation
     if (!checkOrder(orderId))
     {
       throw runtime_error("Order don't exist or not from your studio");
     }
     Order &order = mainOrders.at(orderId);
+    // Order needs to be done and not paid
+    bool done = order.getOrderData().done;
+    bool paid = order.getOrderData().paid;
+    if (!done || paid) {
+      throw runtime_error("Order is not done or is paid");
+    }
     order.markPaid();
+
+    int studioId = order.getOrderData().studioId;
+    cout << "Order Id - " << orderId << " - has been paid" << endl;
+    // The studio ids needs to match
+    cout << "Studio Id of the order paid: " << studioId << endl;
+    cout << "Local Studio Id: " << studio.getId() << endl;
+    
   }
 
   // Checks that the order id they want to process is inside their clients list of the local studio.
@@ -493,6 +545,8 @@ public:
   Photographer(IStudio &s) : studio(s) {}
 
   // Everytime an order is completed needs to be called by the photographer
+  // @audit a photographer that sees this order and didn't take it, can process the order. Maybe it can be allowed as the photographers are trusted, we assume
+  // they won't misbehave.
   void processOrder(int orderId, ConsumedMaterials materials)
   {
     if (!checkOrder(orderId))
@@ -501,6 +555,12 @@ public:
     }
     // Extract the order
     Order &order = mainOrders.at(orderId);
+    // The order has to be taken and not done
+    bool taken = order.getOrderData().taken;
+    bool done = order.getOrderData().done;
+    if (!taken || done) {
+      throw runtime_error("Order not taken or is already done");
+    }
     // Set done to the order
     order.markDone();
 
@@ -511,6 +571,10 @@ public:
     consumedDaily.toners += materials.toners;
     consumedDaily.fixer += materials.fixer;
     consumedDaily.bleach += materials.bleach;
+
+    cout << "Order - " << orderId << " - has been completed by studio - " << studio.getId() << endl;
+    int studioId = order.getOrderData().studioId;
+    cout << "Studio of the order completed: " << studioId;
   }
 
   // Everytime the photographer starts an order
@@ -522,7 +586,17 @@ public:
     }
 
     Order &order = mainOrders.at(orderId);
+    // The order cannot be taken already
+    bool taken = order.getOrderData().taken;
+    if (taken) {
+      throw runtime_error("Order is taken already");
+    }
     order.markTaken();
+
+    cout << "Order - " << orderId << " - has been taken by studio - " << studio.getId() << endl;
+    // See if the order has been taken by a different studio
+    int studioId = order.getOrderData().studioId;
+    cout << "Studio Id of the order taken: " << studioId << endl;
   }
 
   // Gets the orders that needs to be done by the next 24h, based on the visible orders of the studio
@@ -624,7 +698,7 @@ public:
   }
 };
 
-// The reports can be queried by the administrators directly, no
+// @todo what do I do with this class?
 class Administrator
 {
 private:
@@ -702,190 +776,265 @@ public:
   }
 };
 
-int main(void)
+// @todo add view functionality, view orders and so on. View reports?
+// @todo Log the orders when created, see another logs that I could add
+int main()
 {
+  // Create studios with supported services
   vector<ServiceType> s1 = {PhotoPrinting, FilmDeveloping, PassportPhoto};
   vector<ServiceType> s2 = {PhotoPrinting, DigitalEditing, PassportPhoto};
 
   Studio studioA(1, "Rotermanni", s1);
   Studio studioB(2, "Ulemiste", s2);
 
-  auto &recepA = studioA.getReceptionist();
-  auto &recepB = studioB.getReceptionist();
-
-  // Create clients
-  recepA.createClient("Alice");
-  int aliceId = recepA.getLastClientIdUsed();
-  recepA.createClient("Bob");
-  int bobId = recepA.getLastClientIdUsed();
-  recepB.createClient("Eve");
-  int eveId = recepB.getLastClientIdUsed();
-  recepB.createClient("John");
-  int johnId = recepB.getLastClientIdUsed();
-
-  // create orders
-  int orderAlice = recepA.createOrder(aliceId, 12, PhotoPrinting);
-  int orderBob = recepA.createOrder(bobId, 25, FilmDeveloping);
-  int orderEve = recepB.createOrder(eveId, 48, DigitalEditing);
-  int orderJohn = recepB.createOrder(johnId, 15, PassportPhoto);
-
-  // Checks
-  unordered_map<int, Client> clientsA = studioA.getClients();
-  unordered_map<int, Client> clientsB = studioB.getClients();
-
-  // Checks clientsA
-  for (auto [id, client] : clientsA)
+  bool running = true;
+  while (running)
   {
-    // Only alice and bob
-    assert(client.getClientId() == aliceId || client.getClientId() == bobId);
-    // Both clients needs to have exactly 1 order Id
-    vector<int> ids = client.getAllOrderIds();
-    assert(ids.size() == 1);
-    Order order = mainOrders.at(ids[0]);
-    OrderData data = order.getOrderData();
-    assert(data.id == ids[0]);
-    assert(data.studioId == recepA.getStudioId());
-    if (client.getName() == "Alice")
+    cout << "\n=== PHOTO STUDIO SYSTEM ===\n";
+    cout << "1. Create client\n";
+    cout << "2. Create order\n";
+    // View functions for the photographer or receptionist
+    cout << "3. View data\n";
+    cout << "4. Start order\n";
+    cout << "5. Process order (Photographer)\n";
+    cout << "6. Collect payment\n";
+    cout << "7. Generate revenue report\n";
+    cout << "8. Generate materials report\n";
+    cout << "9. Exit\n";
+    cout << "Select option: ";
+
+    int choice;
+    cin >> choice;
+
+    int studioChoice;
+    cout << "Select studio (1 = Rotermanni, 2 = Ulemiste): ";
+    cin >> studioChoice;
+    Studio *studio = (studioChoice == 1) ? &studioA : &studioB;
+
+    auto &recep = studio->getReceptionist();
+    auto &photo = studio->getPhotographer();
+
+    switch (choice)
     {
-      int price = servicePrice(PhotoPrinting);
-      assert(data.isExpress);
-      assert(data.price == price + (price * 25 / 100));
+    // Create client
+    case 1:
+    {
+      cout << "Enter client name: ";
+      string name;
+      // Used to input a name with spaces
+      cin.ignore();
+      getline(cin, name);
+      recep.createClient(name);
+      break;
     }
-    else
+
+    // Create order
+    case 2:
     {
-      assert(!data.isExpress);
-      assert(data.price == servicePrice(FilmDeveloping));
+      cout << "Enter client ID: ";
+      int clientId;
+      cin >> clientId;
+
+      cout << "Enter completion time (hours): ";
+      int hours;
+      cin >> hours;
+
+      cout << "Select service:\n";
+      cout << "0. Photo Printing\n";
+      cout << "1. Film Developing\n";
+      cout << "2. Passport Photo\n";
+      cout << "3. Digital Editing\n";
+      int s;
+      // @todo need to validate that the input number is indeed between 0 and 3?
+      cin >> s;
+      ServiceType service = static_cast<ServiceType>(s);
+      
+      try
+      {
+        recep.createOrder(clientId, hours, service);
+      }
+      catch (const exception &e)
+      {
+        cerr << "Error creating order: " << e.what() << endl;
+      }
+      break;
+    }
+    
+    // View data
+    case 3: {
+      cout << "\n=== VIEW DATA ===\n";
+      cout << "1. View client info\n";
+      cout << "2. View order info\n";
+      cout << "Select option: ";
+      int viewChoice;
+      cin >> viewChoice;
+
+      if (viewChoice == 1)
+      {
+        cout << "Enter client ID: ";
+        int clientId;
+        cin >> clientId;
+
+        auto &clients = studio->getClients();
+        if (clients.find(clientId) == clients.end())
+        {
+          cout << "No client with that ID found in this studio.\n";
+          break;
+        }
+
+        Client &client = clients.at(clientId);
+        cout << "\n--- CLIENT INFO ---\n";
+        cout << "Name: " << client.getName() << endl;
+        cout << "Client ID: " << client.getClientId() << endl;
+        cout << "Number of orders: " << client.getAllOrderIds().size() << endl;
+
+        auto ids = client.getAllOrderIds();
+
+        if (!ids.empty())
+        {
+          cout << "All order ids: " <<  endl;
+          for (int id : ids) {
+          cout << "ID: " << id << endl;
+          }
+          cout << "Last order ID: " << ids.back() << endl;
+          // In order client format?
+          OrderClient lastOrder = client.getLastOrder();
+          cout << "Last order service: " << toString(lastOrder.type) << endl;
+          cout << "Express: " << (lastOrder.isExpress ? "Yes" : "No") << endl;
+          cout << "Price: " << lastOrder.price << "€" << endl;
+          cout << "Paid: " << (lastOrder.paid ? "Yes" : "No") << endl;
+        }
+        cout << "--------------------\n";
+      }
+      else if (viewChoice == 2)
+      {
+        cout << "Enter order ID: ";
+        int orderId;
+        cin >> orderId;
+
+        if (mainOrders.find(orderId) == mainOrders.end())
+        {
+          cout << "No order with that ID found.\n";
+          break;
+        }
+
+        Order &order = mainOrders.at(orderId);
+        OrderData data = order.getOrderData();
+
+        cout << "\n--- ORDER INFO ---\n";
+        cout << "Order ID: " << data.id << endl;
+        cout << "Studio ID: " << data.studioId << endl;
+        cout << "Client Name: " << data.client->getName() << endl;
+        cout << "Client Id: " << data.client->getClientId() << endl;
+        cout << "Service: " << toString(data.type) << endl;
+        cout << "Express: " << (data.isExpress ? "Yes" : "No") << endl;
+        cout << "Price: " << data.price << "€" << endl;
+        cout << "Taken: " << (data.taken ? "Yes" : "No") << endl;
+        cout << "Done: " << (data.done ? "Yes" : "No") << endl;
+        cout << "Paid: " << (data.paid ? "Yes" : "No") << endl;
+        cout << "Reported: " << (data.reported ? "Yes" : "No") << endl;
+        cout << "------------------\n";
+      }
+      else
+      {
+        cout << "Returning to main menu.\n";
+      }
+
+      break;
+    }
+
+    // Start order
+    case 4: {
+      cout << "Enter order ID to start: ";
+      int orderId;
+      cin >> orderId;
+
+      photo.startOrder(orderId);
+      break;
+    }
+
+    // Process order
+    case 5:
+    {
+      cout << "Enter order ID to process: ";
+      int orderId;
+      cin >> orderId;
+
+      ConsumedMaterials materials;
+      cout << "Enter paper used: ";
+      cin >> materials.paper;
+      cout << "Enter developer used: ";
+      cin >> materials.developer;
+      cout << "Enter toners used: ";
+      cin >> materials.toners;
+      cout << "Enter fixer used: ";
+      cin >> materials.fixer;
+      cout << "Enter bleach used: ";
+      cin >> materials.bleach;
+      
+      try
+      {
+        photo.processOrder(orderId, materials);
+      }
+      catch (const exception &e)
+      {
+        cerr << "Error processing order: " << e.what() << endl;
+      }
+      break;
+    }
+    
+    // Pay order
+    case 6:
+    {
+      auto doneOrders = recep.getDoneOrdersNotPaid();
+      if (doneOrders.empty())
+      {
+        cout << "No completed unpaid orders available.\n";
+        break;
+      }
+
+      cout << "Unpaid completed orders:\n";
+      for (int id : doneOrders)
+        cout << "- Order ID: " << id << endl;
+
+      cout << "Enter order ID to mark as paid: ";
+      int orderId;
+      cin >> orderId;
+
+      try
+      {
+        recep.collectPayment(orderId);
+      }
+      catch (const exception &e)
+      {
+        cerr << "Error collecting payment: " << e.what() << endl;
+      }
+      break;
+    }
+
+    case 7:
+    {
+      recep.generateRevenueReport();
+      break;
+    }
+
+    case 8:
+    {
+      photo.makeMaterialsReport();
+      break;
+    }
+
+    case 9:
+    {
+      running = false;
+      cout << "Exiting program. Bye!\n";
+      break;
+    }
+
+    default:
+      cout << "Invalid option, try again.\n";
     }
   }
 
-  // Check clientsB
-  for (auto [id, client] : clientsB)
-  {
-    // Only alice and bob
-    assert(client.getClientId() == eveId || client.getClientId() == johnId);
-    // Both clients needs to have exactly 1 order Id
-    vector<int> ids = client.getAllOrderIds();
-    assert(ids.size() == 1);
-    Order order = mainOrders.at(ids[0]);
-    OrderData data = order.getOrderData();
-    assert(data.id == ids[0]);
-    assert(data.studioId == recepB.getStudioId());
-    if (client.getName() == "John")
-    {
-      int price = servicePrice(PassportPhoto);
-      assert(data.isExpress);
-      assert(data.price == price + (price * 25 / 100));
-    }
-    else
-    {
-      assert(!data.isExpress);
-      assert(data.price == servicePrice(DigitalEditing));
-    }
-  }
-
-  // Photographer from studio B takes Alice and Eve
-  auto &phB = studioB.getPhotographer();
-  // Use the same for simplicity
-  ConsumedMaterials mat = {1, 1, 0, 0, 0};
-  phB.startOrder(orderAlice);
-  phB.startOrder(orderEve);
-  phB.processOrder(orderAlice, mat);
-  phB.processOrder(orderEve, mat);
-
-  // Photographer from studio A takes BOb and john
-  auto &phA = studioA.getPhotographer();
-  // Use the same for simplicity
-  ConsumedMaterials mat1 = {1, 1, 2, 1, 0};
-  phA.startOrder(orderBob);
-  phA.startOrder(orderJohn);
-  phA.processOrder(orderBob, mat1);
-  phA.processOrder(orderJohn, mat1);
-
-  // Receptionist collects the payment
-  // gets all the orders not paid
-  vector<int> idsADone = recepA.getDoneOrdersNotPaid();
-  vector<int> idsBDone = recepB.getDoneOrdersNotPaid();
-
-  assert(idsADone.size() == 2);
-  assert(idsBDone.size() == 2);
-
-  for (auto id : idsADone)
-  {
-    recepA.collectPayment(id);
-  }
-
-  for (auto id : idsBDone)
-  {
-    recepB.collectPayment(id);
-  }
-
-  // Report the orders
-  recepA.generateRevenueReport();
-  recepB.generateRevenueReport();
-
-  // Report consumed materials
-  phA.makeMaterialsReport();
-  phB.makeMaterialsReport();
-
-  unordered_map<int, Client> clientsAFinal = studioA.getClients();
-  unordered_map<int, Client> clientsBFinal = studioB.getClients();
-
-  // Checks clientsA
-  for (auto [id, client] : clientsAFinal)
-  {
-    // Only alice and bob
-    assert(client.getClientId() == aliceId || client.getClientId() == bobId);
-    // Both clients needs to have exactly 1 order Id
-    vector<int> ids = client.getAllOrderIds();
-    assert(ids.size() == 1);
-    Order order = mainOrders.at(ids[0]);
-    OrderData data = order.getOrderData();
-    assert(data.id == ids[0]);
-    // assert(data.studioId == recepA.getStudioId());
-    if (client.getName() == "Alice")
-    {
-      int price = servicePrice(PhotoPrinting);
-      assert(data.isExpress);
-      assert(data.price == price + (price * 25 / 100));
-    }
-    else
-    {
-      assert(!data.isExpress);
-      assert(data.price == servicePrice(FilmDeveloping));
-    }
-    assert(data.taken);
-    assert(data.done);
-    assert(data.paid);
-    assert(data.reported);
-  }
-
-  // Check clientsB
-  for (auto [id, client] : clientsBFinal)
-  {
-    // Only alice and bob
-    assert(client.getClientId() == eveId || client.getClientId() == johnId);
-    // Both clients needs to have exactly 1 order Id
-    vector<int> ids = client.getAllOrderIds();
-    assert(ids.size() == 1);
-    Order order = mainOrders.at(ids[0]);
-    OrderData data = order.getOrderData();
-    assert(data.id == ids[0]);
-    // assert(data.studioId == recepB.getStudioId());
-    if (client.getName() == "John")
-    {
-      int price = servicePrice(PassportPhoto);
-      assert(data.isExpress);
-      assert(data.price == price + (price * 25 / 100));
-    }
-    else
-    {
-      assert(!data.isExpress);
-      assert(data.price == servicePrice(DigitalEditing));
-    }
-
-    assert(data.taken);
-    assert(data.done);
-    assert(data.paid);
-    assert(data.reported);
-  }
+  return 0;
 }
