@@ -50,6 +50,7 @@ struct OrderData
 struct OrderPhotographer
 {
   int id;
+  int studioId;
   enum ServiceType type;
   chrono::system_clock::time_point completionTimestamp;
   bool isExpress;
@@ -167,8 +168,9 @@ public:
   {
     int basePrice = servicePrice(service);
     // AN express order is until 24 hours
-    auto expressTimeLimit = system_clock::now() + hours(24);
-    auto deadline = system_clock::now() + hours(completionTime);
+    auto now = system_clock::now();
+    auto expressTimeLimit = now + hours(24);
+    auto deadline = now + hours(completionTime);
 
     int finalPrice = basePrice;
     bool isExpress = false;
@@ -203,6 +205,7 @@ public:
   {
     OrderPhotographer orderPhotographer = {
         orderData.id,
+        orderData.studioId,
         orderData.type,
         orderData.completionTimestamp,
         orderData.isExpress,
@@ -384,7 +387,8 @@ public:
     cout << "Service: " << toString(service) << endl;
     auto now = system_clock::to_time_t(completionT);
     string timeStr = ctime(&now);
-    cout << "Completion Timestamp: " << timeStr << endl;
+    // The end line is included
+    cout << "Completion Timestamp: " << timeStr;
     cout << "Is express: " << boolalpha << isExpress << endl;
     cout << "Price: " << price << endl;
 
@@ -675,6 +679,7 @@ public:
     }
 
     auto now = system_clock::to_time_t(system_clock::now());
+    // COnvert the time into string
     string timeStr = ctime(&now);
     timeStr.pop_back(); // remove new line from ctime
     // Get the consumed materials of the studio, reference (&), if not I would modify only the copy not the storage itself
@@ -707,9 +712,34 @@ private:
 public:
   Administrator(IStudio &s) : studio(s) {}
 
-  void viewConsumedMaterialsReport() {}
+  void viewConsumedMaterialsReport() {
+    string name = "Materials_report_studio_" + to_string(studio.getId());
+    ifstream file(name);
+    if(!file) {
+      cerr << "No report found.\n";
+      return;
+    }
 
-  void viewDailyRevenueReport() {}
+    cout << "=== Materials report for Studio " << studio.getId() << " ===" << endl;
+    string line;
+    while(getline(file, line)) {
+      cout << line << endl;
+    }
+  }
+
+  void viewDailyRevenueReport() {
+    string filename = "Daily_revenue_studio_" + to_string(studio.getId());
+    ifstream file(filename);
+    if (!file) {
+        cerr << "No report found.\n";
+        return;
+    }
+
+    cout << "=== Revenue Report for Studio " << studio.getId() << " ===" << endl;
+    string line;
+    while (getline(file, line))
+        cout << line << endl;
+  }
 };
 
 class Studio : public IStudio
@@ -800,7 +830,8 @@ int main()
     cout << "6. Collect payment\n";
     cout << "7. Generate revenue report\n";
     cout << "8. Generate materials report\n";
-    cout << "9. Exit\n";
+    cout << "9. View Reports\n";
+    cout << "10. Exit\n";
     cout << "Select option: ";
 
     int choice;
@@ -945,12 +976,62 @@ int main()
 
     // Start order
     case 4: {
-      cout << "Enter order ID to start: ";
-      int orderId;
-      cin >> orderId;
+      auto todayOrders = photo.getFirstOrders();
+      auto pendingOrders = photo.getPendingOrders();
+      if (pendingOrders.empty())
+      { 
+        cout << "No orders to take available.\n";
+        break;
+      }
+      // To not leave the secondary menu
+      while (true) {
+        if (!todayOrders.empty()) {
+            cout << "Orders to take for today:\n";
+            for (OrderPhotographer order : todayOrders) {
+                cout << "---- Order ID: " << order.id << "-------" << endl;
+                cout << "- Service Type: " << toString(order.type) << endl;
+                auto timestamp = system_clock::to_time_t(order.completionTimestamp);
+                cout << "- Deadline: " << ctime(&timestamp);
+                cout << "---------------------------\n";
+            }
+        }
 
-      photo.startOrder(orderId);
-      break;
+        cout << "1. Process order\n";
+        cout << "2. See all orders\n";
+        cout << "3. Back to main menu\n";
+        cout << "Select option: ";
+        int choice;
+        cin >> choice;
+
+        if (choice == 2) {
+            cout << "All orders available to take:\n";
+            for (OrderPhotographer order : pendingOrders) {
+                cout << "---- Order ID: " << order.id << "-------" << endl;
+                cout << "- Service Type: " << toString(order.type) << endl;
+                auto timestamp = system_clock::to_time_t(order.completionTimestamp);
+                cout << "- Deadline: " << ctime(&timestamp) << endl;
+                cout << "- Studio Id: " << order.studioId;
+                cout << "---------------------------\n";
+            }
+        } 
+        else if (choice == 1) {
+            cout << "Enter Order Id to process: ";
+            int orderId;
+            cin >> orderId;
+            try {
+                photo.startOrder(orderId);
+            } catch (const exception &e) {
+                cerr << "Error starting the order: " << e.what() << endl;
+            }
+            break;
+        }
+        // Any other choice goes back to the main menu
+        else {
+            cout << "Returning to main menu.\n";
+            break;
+        }
+    }
+    break;
     }
 
     // Process order
@@ -1023,8 +1104,37 @@ int main()
       photo.makeMaterialsReport();
       break;
     }
-
+    
+    // View reports
     case 9:
+    {
+      cout << "\n=== ADMINISTRATOR REPORTS ===\n";
+      cout << "1. View Daily Revenue Report\n";
+      cout << "2. View Materials Report\n";
+      cout << "3. Back to main menu\n";
+      cout << "Select option: ";
+
+      int adminChoice;
+      cin >> adminChoice;
+
+      auto &admin = studio->getAdmin();
+
+      switch (adminChoice)
+      {
+      case 1:
+        admin.viewDailyRevenueReport();
+        break;
+      case 2:
+        admin.viewConsumedMaterialsReport();
+        break;
+      default:
+        cout << "Returning to main menu.\n";
+        break;
+      }
+      break;
+    }
+
+    case 10:
     {
       running = false;
       cout << "Exiting program. Bye!\n";
