@@ -38,10 +38,8 @@
 2. Make sure you are writting on storage when making changes.
 
 ## Todo
-- Error handling
-- File mangement
-- Each update needs to be changed in storage
-- Terminal interactive
+- Split each class to files and headers.
+
 
 
 ## Fix
