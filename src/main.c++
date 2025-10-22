@@ -180,10 +180,6 @@ class Order {
   }
 };
 
-std::map<int, Order> mainOrders;
-std::map<int, OrderClient> ordersClient;
-std::map<int, OrderPhotographer> ordersPhotographer;
-
 // Client
 class Client {
  private:
